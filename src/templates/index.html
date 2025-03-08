@@ -70,7 +70,7 @@
     top: 290px; 
     left: 40px; 
     width: 300px;
-    max-height: 80%;
+    max-height: 40%;
     overflow: auto;
     word-wrap: break-word;
     white-space: pre-line;
@@ -291,16 +291,17 @@
         }
         
         // Load responder data for an incident
-        function loadUnitData(incidentId) {
-            fetch(`/-/incident-unit-data/${incidentId}`)
+        async function loadUnitData(incidentId) {
+            const result = await fetch(`/-/incident-unit-data/${incidentId}`)
                 .then(response => response.json())
                 .then(data => {
                     console.log(data)
-                    return data.data; 
+                    return data; 
                 })
                 .catch(error => {
                     console.error('Error loading unit data:', error);
                 });
+            return result;
         }
         
         // This will eventually play a timeline of events for a given incident
@@ -311,10 +312,54 @@
                 .map(input => input.id);
 
             
-            selectedIncidents.forEach(incidentId => {
-                unit_data = loadUnitData(incidentId);
+            selectedIncidents.forEach(async (incidentId) => {
+                unit_data = await loadUnitData(incidentId);
+                console.log(unit_data);
+
+                infoWindow.innerHTML = `
+                    <h3>Incident #${unit_data.incident.incident_number}</h3>
+                    <table>
+                        <tr>
+                            <td><strong>Reported:</strong></td>
+                            <td>${new Date(unit_data.incident.event_opened).toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Type:</strong></td>
+                            <td>${unit_data.incident.type} - ${unit_data.incident.subtype}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Location:</strong></td>
+                            <td>${unit_data.incident.address.address_line1}, ${unit_data.incident.address.city}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Common Place:</strong></td>
+                            <td>${unit_data.incident.address.common_place_name || 'N/A'}</td>
+                        </tr>
+
+                    </table>
+                    
+                    <details>
+                        <summary>Comments</summary>
+                        <p>${unit_data.incident.comments}</p>
+                    </details>
+                `;
+                infoWindow.classList.add('visible');
+
+                map.flyTo({
+                    center: [unit_data.incident.address.longitude, unit_data.incident.address.latitude],
+                    zoom: 15,
+                    speed: 0.5
+                });
+
+                await setTimeout(() => {
+                    infoWindow.classList.remove('visible');
+                }, 5000);
+
+                
+
+
+
             });
-            infoWindow.classList.add('visible');
 
             console.log(selectedIncidents); 
 
