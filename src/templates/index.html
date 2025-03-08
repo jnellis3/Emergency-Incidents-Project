@@ -322,6 +322,33 @@
 
                 await delay(5000);
                 infoWindow.classList.remove('visible');
+
+                let eventNum = 1;
+                const colorMap = {};
+                [...new Set(unit_data.responders.map(a => a.unit_id))].forEach((unit, index) => {
+                    colorMap[unit] = `hsl(${index * 360 / unit_data.responders.length}, 100%, 50%)`;
+                });
+                for (const event of unit_data.responders) {
+                    showResponderInfo(eventNum, unit_data);
+                    // add marker
+                    if (unitMarkers[event.unit_id] === undefined) {
+                        unitMarkers[event.unit_id] = [];
+                    }
+                    const el = document.createElement('div');
+                    el.className = 'marker unit';
+                    el.style.width = '15px';
+                    el.style.height = '15px';
+                    el.style.backgroundColor = colorMap[event.unit_id];
+                    const marker = new mapboxgl.Marker(el)
+                        .setLngLat([event.longitude, event.latitude])
+                        .addTo(map);
+                    unitMarkers[event.unit_id].push({ marker, lngLat: [event.longitude, event.latitude] });
+                    fitMapToMarkers();
+
+                    eventNum++;
+                    await flyToLocation(event.longitude, event.latitude);
+                    await delay(5000);
+                }
             }
 
 
@@ -376,16 +403,31 @@
         }
 
 
-        function showResponderInfo(responder, incident) {
-            infoWindow.innerHTML = `
-                <h3>Responder: ${responder.unit_id}</h3>
-                <table>
-                    <tr>
-                        <td><strong>Incident:</strong></td>
-                        <td>#${incident.incident_number}</td>
-                    </tr>
-                </table>
+        function showResponderInfo(toEventNum, incident) {
+            const units = [...new Set(incident.responders.map(a => a.unit_id))]; 
+            let timelineTable = `
+            <table>
+                <th>Time</th>
             `;
+            for (const unit of units) {
+                timelineTable += `<th>${unit}</th>`;
+            }
+            for (let i = 1; i <= toEventNum; i++) {
+                timelineTable += `
+                <tr>
+                    <td>${incident.responders[i].timestamp.split('T')[1].split('-')[0]}</td>
+                `;
+                for (const unit of units) {
+                    if (incident.responders[i].unit_id === unit) {
+                        timelineTable += `<td>${incident.responders[i].status}</td>`;
+                    } else {
+                        timelineTable += `<td></td>`;
+                    }
+                }
+                timelineTable += `</tr>`;
+            }
+            timelineTable += `</table>`;
+            infoWindow.innerHTML = timelineTable;
             infoWindow.classList.add('visible');
         }
         
