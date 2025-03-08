@@ -304,66 +304,90 @@
             return result;
         }
         
-        // This will eventually play a timeline of events for a given incident
         playButton.addEventListener('click', async function() {
 
             // Get all selected incidents
             const selectedIncidents = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
                 .map(input => input.id);
 
-            
-            selectedIncidents.forEach(async (incidentId) => {
-                unit_data = await loadUnitData(incidentId);
+            for (const incidentId of selectedIncidents) {
+                console.log("Processing incident", incidentId);
+
+                const unit_data = await loadUnitData(incidentId);
                 console.log(unit_data);
 
-                infoWindow.innerHTML = `
-                    <h3>Incident #${unit_data.incident.incident_number}</h3>
-                    <table>
-                        <tr>
-                            <td><strong>Reported:</strong></td>
-                            <td>${new Date(unit_data.incident.event_opened).toLocaleString()}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Type:</strong></td>
-                            <td>${unit_data.incident.type} - ${unit_data.incident.subtype}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Location:</strong></td>
-                            <td>${unit_data.incident.address.address_line1}, ${unit_data.incident.address.city}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Common Place:</strong></td>
-                            <td>${unit_data.incident.address.common_place_name || 'N/A'}</td>
-                        </tr>
+                showIncidentInfo(unit_data.incident);
 
-                    </table>
-                    
-                    <details>
-                        <summary>Comments</summary>
-                        <p>${unit_data.incident.comments}</p>
-                    </details>
-                `;
-                infoWindow.classList.add('visible');
+                await flyToLocation(unit_data.incident.address.longitude, unit_data.incident.address.latitude);
 
-                map.flyTo({
-                    center: [unit_data.incident.address.longitude, unit_data.incident.address.latitude],
-                    zoom: 15,
-                    speed: 0.5
-                });
+                await delay(5000);
+                infoWindow.classList.remove('visible');
+            }
 
-                await setTimeout(() => {
-                    infoWindow.classList.remove('visible');
-                }, 5000);
-
-                
-
-
-
-            });
-
-            console.log(selectedIncidents); 
 
         });
+
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        async function flyToLocation(longitude, latitude) {
+            return new Promise(resolve => {
+                map.flyTo({
+                    center: [longitude, latitude],
+                    zoom: 15,
+                    speed: 0.5,
+                    essential: true
+                });
+                
+                // Resolve when animation completes
+                map.once('moveend', resolve);
+            });
+        }
+
+        function showIncidentInfo(incident) {
+            infoWindow.innerHTML = `
+                <h3>Incident #${incident.incident_number}</h3>
+                <table>
+                    <tr>
+                        <td><strong>Reported:</strong></td>
+                        <td>${new Date(incident.event_opened).toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Type:</strong></td>
+                        <td>${incident.type} - ${incident.subtype}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Location:</strong></td>
+                        <td>${incident.address.address_line1}, ${incident.address.city}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Common Place:</strong></td>
+                        <td>${incident.address.common_place_name || 'N/A'}</td>
+                    </tr>
+                </table>
+                
+                <details>
+                    <summary>Comments</summary>
+                    <p>${incident.comments}</p>
+                </details>
+            `;
+            infoWindow.classList.add('visible');
+        }
+
+
+        function showResponderInfo(responder, incident) {
+            infoWindow.innerHTML = `
+                <h3>Responder: ${responder.unit_id}</h3>
+                <table>
+                    <tr>
+                        <td><strong>Incident:</strong></td>
+                        <td>#${incident.incident_number}</td>
+                    </tr>
+                </table>
+            `;
+            infoWindow.classList.add('visible');
+        }
         
         // File upload via dropzone
         dropzone.addEventListener('click', function() {
@@ -391,9 +415,6 @@
                 return;
             }
             
-            // Show loading indicator
-            loadingIndicator.style.display = 'block';
-            
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
@@ -401,7 +422,6 @@
                     uploadData(data);
                 } catch (error) {
                     alert('Error parsing JSON file: ' + error.message);
-                    loadingIndicator.style.display = 'none';
                 }
             };
             reader.readAsText(file);
@@ -423,12 +443,10 @@
                 return response.json();
             })
             .then(result => {
-                loadingIndicator.style.display = 'none';
                 window.location.reload();
             })
             .catch(error => {
                 alert('Error uploading data: ' + error.message);
-                loadingIndicator.style.display = 'none';
             });
         }
         
