@@ -1,16 +1,5 @@
 BEGIN TRANSACTION;
 
--- Apparatus contains information about the entity that responded to the incident
-CREATE TABLE [Apparatus] (
-   [id] INTEGER PRIMARY KEY NOT NULL,
-   [car_id] TEXT,
-   [extended_data] TEXT,
-   [geohash] TEXT,
-   [shift] TEXT,
-   [station] TEXT,
-   [unit_id] TEXT,
-   [unit_type] TEXT
-);
 
 -- Create department table
 CREATE TABLE [Department] (
@@ -43,10 +32,22 @@ CREATE TABLE "Incident" (
    [department_id] INTEGER REFERENCES [Department]([id])
 );
 
+-- Apparatus contains information about the entity that responded to the incident
+CREATE TABLE [Apparatus] (
+   [id] INTEGER PRIMARY KEY NOT NULL,
+   [car_id] TEXT,
+   [extended_data] TEXT,
+   [geohash] TEXT,
+   [shift] TEXT,
+   [station] TEXT,
+   [unit_id] TEXT,
+   [unit_type] TEXT,
+   [incident_id] INTEGER REFERENCES [Incident]([id])
+);
 
 CREATE TABLE [Unit_Status] (
    [id] INTEGER PRIMARY KEY NOT NULL,
-   [apparatus_id] INTEGER,
+   [apparatus_id] INTEGER REFERENCES [Apparatus]([id]),
    [status] TEXT,
    [geohash] TEXT,
    [latitude] FLOAT,

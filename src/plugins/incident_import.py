@@ -25,7 +25,7 @@ async def create_incident(datasette, request):
             }, status=400)
 
 
-        required_fields = ["address", "aparatus", "description", "fire_department"]
+        required_fields = ["address", "apparatus", "description", "fire_department"]
         missing_fields = [field for field in required_fields if field not in incident_data]
         if missing_fields:
             return Response.json({
@@ -34,17 +34,21 @@ async def create_incident(datasette, request):
             }, status=400)
 
         db = sqlite_utils.Database("/mnt/data.db")
-        department_id = db["Department"].upsert(
-            incident_data["fire_department"], pk = "fd_id"
+
+
+        department = {k: v for k, v in incident_data["fire_department"].items() if k in db["Department"].columns_dict.keys()}
+        department_id = db["Department"].insert(
+            department
         ).last_pk
 
-        address_id = db["address"].insert(
-            incident_data["address"]
-        ).last_pk
+        address = {k: v for k, v in incident_data["address"].items() if k in db["address"].columns_dict.keys()}
+        address_id = db["address"].insert(address).last_pk
 
         incident_data["description"]["address_id"] = address_id
-        incident_data["description"]["fd_id"] = department_id
-        incident_id = db["Incident"].insert(incident_data["description"]).last_pk
+        incident_data["description"]["department_id"] = department_id
+
+        incident = {k: v for k, v in incident_data["description"].items() if k in db["Incident"].columns_dict.keys()}
+        incident_id = db["Incident"].insert(incident).last_pk
 
         # make sure apparatus is an array
         if not isinstance(incident_data["apparatus"], list):
@@ -52,14 +56,27 @@ async def create_incident(datasette, request):
 
         for apparatus in incident_data["apparatus"]:
             apparatus["incident_id"] = incident_id
-            apparatus_id = db["Apparatus"].insert(apparatus)
+
+            responder = {k: v for k, v in apparatus.items() if k in db["Apparatus"].columns_dict.keys()}
+            apparatus_id = db["Apparatus"].insert(responder).last_pk
             for key in apparatus["unit_status"]:
                 apparatus["unit_status"][key]["apparatus_id"] = apparatus_id
                 apparatus["unit_status"][key]["status"] = key
-                db["Unit_Status"].insert(apparatus["unit_status"][key])
+                status = {k: v for k, v in apparatus["unit_status"][key].items() if k in db["Unit_Status"].columns_dict.keys()}
+                db["Unit_Status"].insert(status)
 
-    except:
-        pass
+
+        return Response.json({
+            "status": "ok",
+            "incident_id": incident_id
+        }, status=201)
+
+    except Exception as e:
+        raise e 
+        return Response.json({
+            "status": "error",
+            "message": str(e) 
+        }, status=500)
 
 
 
