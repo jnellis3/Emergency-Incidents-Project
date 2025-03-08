@@ -29,6 +29,7 @@
         }
         #incident-table {
             margin-top: 20px;
+            width: 100%;
         }
         .selected-row {
             background-color: #e7f3ff !important;
@@ -64,30 +65,32 @@
             max-width: 300px;
         }
 
-        #info-window {
-            position: absolute;
-            top: 10%;
-            left: 50px;
-            width: 300px;
-            max-height: 100%;
-            overflow: auto;
-            word-wrap: break-word;
-            white-space: pre-line;
-            background-color: white;
-            padding: 10px;
-            border-radius: 5px;
-            display: block;
+#info-window {
+    position: absolute;
+    top: 290px; 
+    left: 40px; 
+    width: 300px;
+    max-height: 80%;
+    overflow: auto;
+    word-wrap: break-word;
+    white-space: pre-line;
+    background-color: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    display: block;
+    z-index: 10; 
 
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 1.2s ease-in-out;
-        }
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease-in-out;
+}
 
-        #info-window.visible {
-            opacity: .8;
-            visibility: visible;
-            transition: opacity 1.2s ease-in;
-        }
+#info-window.visible {
+    opacity: 0.9;  /* Changed from .8 to .9 */
+    visibility: visible;
+    transition: opacity 0.3s ease-in;
+}
     
         @keyframes anim-lineUp {
             0% {
@@ -134,26 +137,15 @@
             </div>
         </div>
         
-        <div class="row" id="timeline-container">
-            <div>
-                <h4>Event Timeline</h4>
-                <div>
-                    <button id="play-button">
-                        <i></i> Play
-                    </button>
-                    <input type="range" id="timeline-slider" min="0" max="100" value="0">
-                    <span id="time-display">00:00:00</span>
-                </div>
-            </div>
-        </div>
-        
         <div>
             <div>
                 <h4>Incident List</h4>
                 <div>
+                    <button id="play-button">Play Timeline</button>
                     <table id="incident-table">
                         <thead>
                             <tr>
+                                <th>Add to Timeline</th>
                                 <th>Incident #</th>
                                 <th>Type</th>
                                 <th>Location</th>
@@ -190,9 +182,10 @@
                                 LIMIT 50
                             ") %}
                             <tr data-incident-id="{{ incident.id }}" data-lat="{{ incident.latitude }}" data-lng="{{ incident.longitude }}">
+                                <td><input type="checkbox" id="{{ incident.id }}">Play Timeline</button></td>
                                 <td>{{ incident.incident_number }}</td>
                                 <td>{{ incident.type }}{% if incident.subtype %} - {{ incident.subtype }}{% endif %}</td>
-                                <td>{{ incident.address_line1 }}, {{ incident.city }}{% if incident.state %}, {{ incident.state }}{% endif %}</td>
+                                <td>{{ incident.address_line1 }}</td>
                                 <td>{{ incident.event_opened }}</td>
                                 <td>{{ incident.unit_count }}</td>
                                 <td>{% if incident.event_closed %}Closed{% else %}Active{% endif %}</td>
@@ -230,6 +223,7 @@
         const timelineSlider = document.getElementById('timeline-slider');
         const timeDisplay = document.getElementById('time-display');
         const playButton = document.getElementById('play-button');
+        const infoWindow = document.getElementById('info-window');
         
         // add incidents to the map
         map.on('load', function() {
@@ -302,16 +296,7 @@
                 .then(response => response.json())
                 .then(data => {
                     console.log(data)
-                    // Process unit status data
-                    data.data.forEach(unitStatus => {
-                        addUnitMarker(
-                            unitStatus.unit_id,
-                            unitStatus.latitude,
-                            unitStatus.longitude,
-                            unitStatus.timestamp,
-                            unitStatus.status
-                        );
-                    });
+                    return data.data; 
                 })
                 .catch(error => {
                     console.error('Error loading unit data:', error);
@@ -319,7 +304,19 @@
         }
         
         // This will eventually play a timeline of events for a given incident
-        playButton.addEventListener('click', function() {
+        playButton.addEventListener('click', async function() {
+
+            // Get all selected incidents
+            const selectedIncidents = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
+                .map(input => input.id);
+
+            
+            selectedIncidents.forEach(incidentId => {
+                unit_data = loadUnitData(incidentId);
+            });
+            infoWindow.classList.add('visible');
+
+            console.log(selectedIncidents); 
 
         });
         
