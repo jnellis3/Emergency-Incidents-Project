@@ -31,3 +31,9 @@ For the map, I'd like to use the mapbox api to create the map and overlay data.
 I've created the intitial application and a functional endpoint for uploading new incident data.
 
 The next step is to create a skeleton front-end where we can post to the endpoint and view the map.
+
+Most of the functionality is now built out. A database records previously uploaded incident data, and we have the ability to drop in new data.
+
+The map will plot incidents, and will show a timeline of responses for each incident. The api will also return weather data. 
+
+The last thing to do is add a weather dashboard to the map.

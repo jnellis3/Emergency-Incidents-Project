@@ -65,32 +65,32 @@
             max-width: 300px;
         }
 
-#info-window {
-    position: absolute;
-    top: 290px; 
-    left: 40px; 
-    width: 300px;
-    max-height: 40%;
-    overflow: auto;
-    word-wrap: break-word;
-    white-space: pre-line;
-    background-color: white;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    display: block;
-    z-index: 10; 
+        #info-window {
+            position: absolute;
+            top: 290px; 
+            left: 40px; 
+            width: 300px;
+            max-height: 40%;
+            overflow: auto;
+            word-wrap: break-word;
+            white-space: pre-line;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            display: block;
+            z-index: 10; 
 
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease-in-out;
-}
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out;
+        }
 
-#info-window.visible {
-    opacity: 0.9;  /* Changed from .8 to .9 */
-    visibility: visible;
-    transition: opacity 0.3s ease-in;
-}
+        #info-window.visible {
+            opacity: 0.9;  /* Changed from .8 to .9 */
+            visibility: visible;
+            transition: opacity 0.3s ease-in;
+        }
     
         @keyframes anim-lineUp {
             0% {
@@ -204,7 +204,7 @@
         const map = new mapboxgl.Map({
             container: 'map',
             style: 'mapbox://styles/mapbox/navigation-night-v1',
-            center: [-95.7129, 37.0902], // Default center (US)
+            center: [-77, 37], // Default center (US)
             zoom: 4
         });
         
