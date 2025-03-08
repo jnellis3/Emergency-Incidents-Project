@@ -2,6 +2,9 @@ from datasette import hookimpl, Response
 import json
 import sqlite_utils
 import hashlib
+import requests
+import dotenv
+
 
 async def incident_unit_data(datasette, request):
 
@@ -10,14 +13,24 @@ async def incident_unit_data(datasette, request):
         return {"error": "No incident ID provided"}, 400
     
     db = sqlite_utils.Database("/mnt/data.db")
+
+    incident_data = db["Incident"].get(incident_id)
+    if not incident_data:
+        return Response.json({
+            "status": "error",
+            "message": "Incident not found"
+        }, status=404)
+    
+    incident_data = dict(incident_data)
+
+    address_data = db["address"].get(incident_data["address_id"])
+    department_data = db["Department"].get(incident_data["department_id"])
+    incident_data["address"] = dict(address_data)
+    incident_data["fire_department"] = dict(department_data)
     
     query = """
         SELECT 
-            a.unit_id, 
-            us.status, 
-            us.latitude,
-            us.longitude,
-            us.timestamp
+            *
         FROM 
             Unit_Status us
         JOIN
@@ -35,7 +48,8 @@ async def incident_unit_data(datasette, request):
 
     return Response.json({
         "status": "ok",
-        "data": response
+        "responders": response,
+        "incident": incident_data
     }, status=200)
 
 async def create_incident(datasette, request):
