@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Emergency Response Dashboard</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.js"></script>
+    <style>
+        body {
+            padding: 1rem;
+        }
+        #dropzone {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 25px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #dropzone:hover {
+            background-color: #f8f9fa;
+        }
+        #map {
+            width: 100%;
+            height: 500px;
+            border-radius: 8px;
+        }
+        #incident-table {
+            margin-top: 20px;
+        }
+        .selected-row {
+            background-color: #e7f3ff !important;
+        }
+        #timeline-container {
+            padding: 20px 0;
+        }
+        #timeline-slider {
+            width: 100%;
+        }
+        .filter-container {
+            margin-bottom: 20px;
+        }
+        .marker {
+            background-color: #f44336;
+            border-radius: 50%;
+            border: 2px solid white;
+            cursor: pointer;
+        }
+        .marker.selected {
+            background-color: #4CAF50;
+            border: 2px solid yellow;
+            z-index: 2;
+        }
+        .marker.unit {
+            background-color: #2196F3;
+        }
+        .marker.unit.selected {
+            background-color: #4CAF50;
+        }
+
+        .mapboxgl-popup {
+            max-width: 300px;
+        }
+
+        #info-window {
+            position: absolute;
+            top: 10%;
+            left: 50px;
+            width: 300px;
+            max-height: 100%;
+            overflow: auto;
+            word-wrap: break-word;
+            white-space: pre-line;
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            display: block;
+
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 1.2s ease-in-out;
+        }
+
+        #info-window.visible {
+            opacity: .8;
+            visibility: visible;
+            transition: opacity 1.2s ease-in;
+        }
+    
+        @keyframes anim-lineUp {
+            0% {
+                opacity: 0;
+                transform: translateY(80%);
+            }
+            20% {
+                opacity: 0;
+            }
+            50% {
+                opacity: 1;
+                transform: translateY(0%);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0%);
+            }
+
+        }
+
+        #lineup {
+            animation: 2s anim-lineUp ease-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <h1 class="mb-4">Emergency Response Incident Dashboard</h1>
+        
+        <div>
+            <div>
+                <div id="dropzone">
+                    <h3>Drop JSON file here</h3>
+                    <p>or click to select file</p>
+                    <input type="file" id="fileInput" style="display: none;" accept=".json">
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div id="map"></div>
+                <div id="info-window"></div>
+            </div>
+        </div>
+        
+        <div class="row" id="timeline-container">
+            <div>
+                <h4>Event Timeline</h4>
+                <div>
+                    <button id="play-button">
+                        <i></i> Play
+                    </button>
+                    <input type="range" id="timeline-slider" min="0" max="100" value="0">
+                    <span id="time-display">00:00:00</span>
+                </div>
+            </div>
+        </div>
+        
+        <div>
+            <div>
+                <h4>Incident List</h4>
+                <div>
+                    <table id="incident-table">
+                        <thead>
+                            <tr>
+                                <th>Incident #</th>
+                                <th>Type</th>
+                                <th>Location</th>
+                                <th>Opened</th>
+                                <th>Units</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="incident-tbody">
+                            {% for incident in sql("
+                                SELECT 
+                                    i.id, 
+                                    i.incident_number, 
+                                    i.type, 
+                                    i.subtype,
+                                    i.event_opened,
+                                    i.event_closed,
+                                    a.address_line1,
+                                    a.city,
+                                    a.state,
+                                    a.latitude,
+                                    a.longitude,
+                                    count(distinct ap.id) as unit_count
+                                FROM 
+                                    Incident i
+                                LEFT JOIN 
+                                    address a ON i.address_id = a.id
+                                LEFT JOIN
+                                    Apparatus ap ON i.id = ap.incident_id
+                                GROUP BY 
+                                    i.id
+                                ORDER BY 
+                                    i.event_opened DESC
+                                LIMIT 50
+                            ") %}
+                            <tr data-incident-id="{{ incident.id }}" data-lat="{{ incident.latitude }}" data-lng="{{ incident.longitude }}">
+                                <td>{{ incident.incident_number }}</td>
+                                <td>{{ incident.type }}{% if incident.subtype %} - {{ incident.subtype }}{% endif %}</td>
+                                <td>{{ incident.address_line1 }}, {{ incident.city }}{% if incident.state %}, {{ incident.state }}{% endif %}</td>
+                                <td>{{ incident.event_opened }}</td>
+                                <td>{{ incident.unit_count }}</td>
+                                <td>{% if incident.event_closed %}Closed{% else %}Active{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Initialize Mapbox using public api key
+        mapboxgl.accessToken = 'pk.eyJ1Ijoiam5lbGxpczMiLCJhIjoiY204MGRsOXhhMHVtcTJrcTRtOWR6aGJ2MSJ9.7uXkuqIwiHiqkCh6kBBH5Q'; // Replace with your actual token
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/navigation-night-v1',
+            center: [-95.7129, 37.0902], // Default center (US)
+            zoom: 4
+        });
+        
+        // Global Variables
+        let selectedIncidents = new Set();
+        let markers = {};
+        let unitMarkers = {};
+        let timelineData = [];
+        let timelineInterval = null;
+        let playingTimeline = false;
+        
+        const incidentTable = document.getElementById('incident-tbody');
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const loadingIndicator = document.getElementById('loading');
+        const timelineSlider = document.getElementById('timeline-slider');
+        const timeDisplay = document.getElementById('time-display');
+        const playButton = document.getElementById('play-button');
+        
+        // add incidents to the map
+        map.on('load', function() {
+            const rows = incidentTable.querySelectorAll('tr');
+            rows.forEach(row => {
+                const id = row.getAttribute('data-incident-id');
+                const lat = parseFloat(row.getAttribute('data-lat'));
+                const lng = parseFloat(row.getAttribute('data-lng'));
+                
+                if (id && !isNaN(lat) && !isNaN(lng)) {
+                    const el = document.createElement('div');
+                    el.className = 'marker';
+                    el.style.width = '15px';
+                    el.style.height = '15px';
+                    
+                    const marker = new mapboxgl.Marker(el)
+                        .setLngLat([lng, lat])
+                        .addTo(map);
+                    
+                    // Add popup with incident details
+                    const row = document.querySelector(`tr[data-incident-id="${id}"]`);
+                    if (row) {
+                        const incidentNum = row.cells[0].textContent;
+                        const incidentType = row.cells[1].textContent;
+                        const incidentLocation = row.cells[2].textContent;
+                        
+                        const popup = new mapboxgl.Popup({ offset: 25 })
+                            .setHTML(`
+                                <strong>Incident #${incidentNum}</strong><br>
+                                Type: ${incidentType}<br>
+                                Location: ${incidentLocation}
+                            `);
+                        
+                        marker.setPopup(popup);
+                    }
+                    
+                    markers[id] = { marker, element: el };
+                }
+            });
+            
+            if (Object.keys(markers).length > 0) {
+                fitMapToMarkers();
+            }
+        });
+        
+        // Fit map to markers
+        function fitMapToMarkers() {
+            const bounds = new mapboxgl.LngLatBounds();
+            
+            // Add incident markers to bounds
+            Object.values(markers).forEach(m => {
+                bounds.extend(m.marker.getLngLat());
+            });
+            
+            // Add unit markers to bounds
+            Object.values(unitMarkers).forEach(unitArray => {
+                unitArray.forEach(m => {
+                    bounds.extend(m.lngLat);
+                });
+            });
+            
+            if (!bounds.isEmpty()) {
+                map.fitBounds(bounds, { padding: 50 });
+            }
+        }
+        
+        // Load responder data for an incident
+        function loadUnitData(incidentId) {
+            fetch(`/-/incident-unit-data/${incidentId}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data)
+                    // Process unit status data
+                    data.data.forEach(unitStatus => {
+                        addUnitMarker(
+                            unitStatus.unit_id,
+                            unitStatus.latitude,
+                            unitStatus.longitude,
+                            unitStatus.timestamp,
+                            unitStatus.status
+                        );
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading unit data:', error);
+                });
+        }
+        
+        // This will eventually play a timeline of events for a given incident
+        playButton.addEventListener('click', function() {
+
+        });
+        
+        // File upload via dropzone
+        dropzone.addEventListener('click', function() {
+            fileInput.click();
+        });
+        
+        dropzone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            if (e.dataTransfer.files.length) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', function() {
+            if (fileInput.files.length) {
+                handleFile(fileInput.files[0]);
+            }
+        });
+        
+        // Handle the uploaded file
+        function handleFile(file) {
+
+            if (file.type !== 'application/json') {
+                alert('Please upload a JSON file');
+                return;
+            }
+            
+            // Show loading indicator
+            loadingIndicator.style.display = 'block';
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    uploadData(data);
+                } catch (error) {
+                    alert('Error parsing JSON file: ' + error.message);
+                    loadingIndicator.style.display = 'none';
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        // Upload incident to server
+        function uploadData(data) {
+            fetch('/-/create-incident', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Server returned ' + response.status);
+                }
+                return response.json();
+            })
+            .then(result => {
+                loadingIndicator.style.display = 'none';
+                window.location.reload();
+            })
+            .catch(error => {
+                alert('Error uploading data: ' + error.message);
+                loadingIndicator.style.display = 'none';
+            });
+        }
+        
+    </script>
+</body>
+</html>
