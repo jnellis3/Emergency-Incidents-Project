@@ -87,11 +87,39 @@
         }
 
         #info-window.visible {
-            opacity: 0.9;  /* Changed from .8 to .9 */
+            opacity: 0.7;  /* Changed from .8 to .9 */
             visibility: visible;
             transition: opacity 0.3s ease-in;
         }
-    
+               
+        #weather-window {
+            position: absolute;
+            top: 290px; 
+            left: 80%; 
+            width: 200;
+            max-height: 40%;
+            overflow: auto;
+            word-wrap: break-word;
+            white-space: pre-line;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            display: block;
+            z-index: 10; 
+
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .data-row {
+            margin-bottom: 5px;
+            }
+        #weather-window.visible {
+            opacity: 0.7;  /* Changed from .8 to .9 */
+            visibility: visible;
+            transition: opacity 0.3s ease-in;
+        }
         @keyframes anim-lineUp {
             0% {
                 opacity: 0;
@@ -134,6 +162,14 @@
             <div class="col-12">
                 <div id="map"></div>
                 <div id="info-window"></div>
+                <div id="weather-window">
+                    <h4>Weather Information</h4> 
+                    <div class="data-row">Temperature: <span id="temp">15.6</span>°C</div>
+                    <div class="data-row">Humidity: <span id="rhum">40</span>%</div>
+                    <div class="data-row">Pressure: <span id="pres">1014.5</span> hPa</div>
+                    <div class="data-row">Wind: <span id="wspd">16.6</span> km/h, direction <span id="wdir">360</span>°</div>
+                    <div class="data-row">Dew Point: <span id="dwpt">2.0</span>°C</div>
+                </div>
             </div>
         </div>
         
@@ -317,7 +353,7 @@
                 console.log(unit_data);
 
                 showIncidentInfo(unit_data.incident);
-
+                showWeatherInfo(unit_data.incident.weather, unit_data.incident.event_opened);
                 await flyToLocation(unit_data.incident.address.longitude, unit_data.incident.address.latitude);
 
                 await delay(5000);
@@ -330,6 +366,7 @@
                 });
                 for (const event of unit_data.responders) {
                     showResponderInfo(eventNum, unit_data);
+                    showWeatherInfo(event.timestamp, unit_data.incident.weather);
                     // add marker
                     if (unitMarkers[event.unit_id] === undefined) {
                         unitMarkers[event.unit_id] = [];
@@ -372,6 +409,16 @@
             });
         }
 
+        function showWeatherInfo(timestamp, weather) {
+            const weatherData = weather[new Date(timestamp).getHours()];
+            document.getElementById('temp').textContent = weatherData?.temp;
+            document.getElementById('rhum').textContent = weatherData?.rhum;
+            document.getElementById('pres').textContent = weatherData?.pres;
+            document.getElementById('wspd').textContent = weatherData?.wspd;
+            document.getElementById('wdir').textContent = weatherData?.wdir;
+            document.getElementById('dwpt').textContent = weatherData?.dwpt;
+            document.getElementById('weather-window').classList.add('visible');
+        }
         function showIncidentInfo(incident) {
             infoWindow.innerHTML = `
                 <h3>Incident #${incident.incident_number}</h3>
