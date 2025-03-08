@@ -24,3 +24,10 @@ Given my time constraints, I'm leaning towards using the [Datasette](https://doc
 On the front end, I want to have a map of Richmond displayed, a place at the top to upload new incidents, and a list of previously saved incidents at the bottom. Users will be able to select which incidents they would like overlayed on the map, and time-permitting, will be able to use a timeline slider to see the order in which the events occured.
 
 For the map, I'd like to use the mapbox api to create the map and overlay data.
+
+
+## Progress
+
+I've created the intitial application and a functional endpoint for uploading new incident data.
+
+The next step is to create a skeleton front-end where we can post to the endpoint and view the map.
