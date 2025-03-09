@@ -2,7 +2,7 @@
 
 This project allows users to upload emergency incident data and view a timeline of dispatch events with interactive maps. The application displays incident locations, unit responses, and weather conditions during the incident.
 
-A demo is hosted at [](https://incidents.jsnellis.net)
+A demo is hosted at [incidents.jsnellis.net](https://incidents.jsnellis.net)
 
 ## Installation
 
@@ -67,5 +67,12 @@ I spent probably 7 or 8 hours on this project, mostly from implementing the time
 ## Screenshots
 
 ### Dashboard Overview
+![image](https://github.com/user-attachments/assets/3d0191a5-4b27-4688-b709-1747947ffefd)
 
 ### Incident Timeline
+![image](https://github.com/user-attachments/assets/abf0530c-a0f8-437d-8b12-10fe4cb85924)
+
+### Timeline Info Widget
+![image](https://github.com/user-attachments/assets/df98b276-b5fd-4f84-bc8d-8541954dddae)
+
+
