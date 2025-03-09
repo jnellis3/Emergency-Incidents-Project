@@ -56,6 +56,8 @@
         }
         .marker.unit {
             background-color: #2196F3;
+            border-radius: 0;
+            border: 2px solid rgb(0, 0, 0);
         }
         .marker.unit.selected {
             background-color: #4CAF50;
@@ -69,13 +71,12 @@
             position: absolute;
             top: 290px; 
             left: 40px; 
-            width: 300px;
-            max-height: 40%;
+            width: 450px;
+            max-height: 60%;
             overflow: auto;
             word-wrap: break-word;
             white-space: pre-line;
             background-color: white;
-            padding: 15px;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
             display: block;
@@ -218,7 +219,7 @@
                                 LIMIT 50
                             ") %}
                             <tr data-incident-id="{{ incident.id }}" data-lat="{{ incident.latitude }}" data-lng="{{ incident.longitude }}">
-                                <td><input type="checkbox" id="{{ incident.id }}">Play Timeline</button></td>
+                                <td><input type="checkbox" id="{{ incident.id }}"></button></td>
                                 <td>{{ incident.incident_number }}</td>
                                 <td>{{ incident.type }}{% if incident.subtype %} - {{ incident.subtype }}{% endif %}</td>
                                 <td>{{ incident.address_line1 }}</td>
@@ -282,9 +283,9 @@
                     // Add popup with incident details
                     const row = document.querySelector(`tr[data-incident-id="${id}"]`);
                     if (row) {
-                        const incidentNum = row.cells[0].textContent;
-                        const incidentType = row.cells[1].textContent;
-                        const incidentLocation = row.cells[2].textContent;
+                        const incidentNum = row.cells[1].textContent;
+                        const incidentType = row.cells[2].textContent;
+                        const incidentLocation = row.cells[3].textContent;
                         
                         const popup = new mapboxgl.Popup({ offset: 25 })
                             .setHTML(`
@@ -353,13 +354,13 @@
                 console.log(unit_data);
 
                 showIncidentInfo(unit_data.incident);
-                showWeatherInfo(unit_data.incident.weather, unit_data.incident.event_opened);
+                showWeatherInfo(unit_data.incident.event_opened, unit_data.incident.weather);
                 await flyToLocation(unit_data.incident.address.longitude, unit_data.incident.address.latitude);
 
                 await delay(5000);
                 infoWindow.classList.remove('visible');
 
-                let eventNum = 1;
+                let eventNum = 0;
                 const colorMap = {};
                 [...new Set(unit_data.responders.map(a => a.unit_id))].forEach((unit, index) => {
                     colorMap[unit] = `hsl(${index * 360 / unit_data.responders.length}, 100%, 50%)`;
@@ -388,7 +389,9 @@
                 }
             }
 
-
+            fitMapToMarkers();
+            document.getElementById('weather-window').classList.remove('visible');
+            infoWindow.classList.remove('visible');
         });
 
         function delay(ms) {
@@ -453,6 +456,18 @@
         function showResponderInfo(toEventNum, incident) {
             const units = [...new Set(incident.responders.map(a => a.unit_id))]; 
             let timelineTable = `
+            <h3>Response: ${incident.incident.fire_department.name}</h3>
+            <b>Units Dispatched</b>
+            <table style="border: 1px solid black;">
+            `;
+            for (const unit of units) {
+                const responder = incident.responders.find(a => a.unit_id === unit);
+
+                timelineTable += `
+                    <tr><td ">${unit}: </td><td>${responder.unit_type}</td></tr>
+                `;
+            }
+            timelineTable += `</table>
             <table>
                 <th>Time</th>
             `;
@@ -462,13 +477,13 @@
             for (let i = 1; i <= toEventNum; i++) {
                 timelineTable += `
                 <tr>
-                    <td>${incident.responders[i].timestamp.split('T')[1].split('-')[0]}</td>
+                    <td style="border: 1px solid black;">${incident.responders[i].timestamp.split('T')[1].split('-')[0]}</td>
                 `;
                 for (const unit of units) {
                     if (incident.responders[i].unit_id === unit) {
-                        timelineTable += `<td>${incident.responders[i].status}</td>`;
+                        timelineTable += `<td style="border: 1px solid black;">${incident.responders[i].status}</td>`;
                     } else {
-                        timelineTable += `<td></td>`;
+                        timelineTable += `<td style="border: 1px solid black;"></td>`;
                     }
                 }
                 timelineTable += `</tr>`;
@@ -476,6 +491,8 @@
             timelineTable += `</table>`;
             infoWindow.innerHTML = timelineTable;
             infoWindow.classList.add('visible');
+            // make sure it auto scrolls to the bottom 
+            infoWindow.scrollTop = infoWindow.scrollHeight;
         }
         
         // File upload via dropzone
@@ -521,7 +538,7 @@
             fetch('/-/create-incident', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(data)
             })

@@ -1,0 +1,19 @@
+{
+	"title": "Emergency Incident Data Viewer",
+	"about": "Prominent Edge take home assignment",
+	"plugins": {
+		"datasette-write-ui": {
+			"allow": {
+				"id": "*"
+			}
+		},
+		"datasette-write": {
+			"allow": {
+				"id": "*"
+			}
+		},
+		"datasette-cors": {
+			"allow_all": true
+		}
+    }
+}

@@ -12,7 +12,9 @@ RUN pip install https://github.com/simonw/datasette/archive/refs/tags/0.65.zip &
 
 RUN pip install requests dotenv sqlite_utils
 
-RUN datasette install datasette-template-sql
+RUN datasette install datasette-template-sql && \
+    datasette install datasette-import && \
+    datasette install datasette-cors
 
 COPY ./src /mnt
 

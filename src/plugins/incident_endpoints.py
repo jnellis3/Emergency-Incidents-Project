@@ -4,6 +4,29 @@ import sqlite_utils
 import hashlib
 import requests
 import dotenv
+import os
+
+dotenv.load_dotenv()
+def get_hourly_weather(lat, lon, date):
+
+    url = os.getenv("WEATHER_URL")
+
+    body = {
+        "lat": lat,
+        "lon": lon,
+        "start": date,
+        "end": date
+    }
+
+    headers = {
+        "x-rapidapi-key": os.getenv("WEATHER_API_KEY"),
+        "x-rapidapi-host": os.getenv("WEATHER_API_HOST"),
+    }
+
+    response = requests.get(url, headers=headers, params=body)
+    return response.json()
+
+
 
 
 async def incident_unit_data(datasette, request):
@@ -24,6 +47,9 @@ async def incident_unit_data(datasette, request):
     incident_data = dict(incident_data)
 
     address_data = db["address"].get(incident_data["address_id"])
+
+    weather = get_hourly_weather(address_data["latitude"], address_data["longitude"], incident_data["event_opened"].split("T")[0])
+    incident_data["weather"] = weather["data"]
     department_data = db["Department"].get(incident_data["department_id"])
     incident_data["address"] = dict(address_data)
     incident_data["fire_department"] = dict(department_data)
@@ -83,7 +109,6 @@ async def create_incident(datasette, request):
 
         db = sqlite_utils.Database("/mnt/data.db")
 
-
         department = {k: v for k, v in incident_data["fire_department"].items() if k in db["Department"].columns_dict.keys()}
         department_id = db["Department"].insert(
             department
@@ -120,7 +145,6 @@ async def create_incident(datasette, request):
         }, status=201)
 
     except Exception as e:
-        raise e 
         return Response.json({
             "status": "error",
             "message": str(e) 
